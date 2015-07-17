@@ -3,33 +3,45 @@ __author__ = 'pi'
 from ubidots import ApiClient
 import RPi.GPIO as GPIO
 import time
-import Queue
+#import Queue
 
-CONST_MotionPin = 7
-CONST_CheckDelay = 0.1
-CONST_DetectionExtraDelay = 1.5
+class Mainer:
+    detectionCounter = 0
 
-#noConnectionDetrctions = Queue.Queue()
+    @staticmethod
+    def run():
+        def handleMotionDetected(channel):
+            Mainer.detectionCounter += 1
+            print("Detection # " + str(Mainer.detectionCounter))
 
-# Set up pins
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(CONST_MotionPin, GPIO.IN)
-
-# TODO: Connect to UbiDots account
+        def programCleanUp():
+            GPIO.cleanup()
 
 
-detectionCounter = 0
 
-stop = False
+        const_MotionPin = 7
 
-while not stop:
-    motionDetected = GPIO.input(CONST_MotionPin)
-    print("Checking for motion...")
+        # noConnectionDetrctions = Queue.Queue()
 
-    if motionDetected:
-        detectionCounter += 1
-        motionDetected = False
-        print("Detection # " + str(detectionCounter))
-        #time.sleep(CONST_DetectionExtraDelay)
+        # TODO: Connect to UbiDots account
 
-    time.sleep(CONST_CheckDelay)
+        # Set up pins
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(const_MotionPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.add_event_detect(const_MotionPin, GPIO.RISING, handleMotionDetected)
+
+        stop = False
+
+        try:
+            while not stop:
+
+                text = raw_input('Press any key to quit.\n')
+                stop = True
+
+        except KeyboardInterrupt:
+            programCleanUp()
+
+        programCleanUp()
+
+
+Mainer.run()
