@@ -21,7 +21,7 @@ class UbiConnection:
 
         except (UbiApi.UbidotsError, RequestException):
             if (not self._connected): # Print message if we just lost connection.
-                print('Failed to connect to Ubidots.') # Client of class should try again until it becomes availiable.
+                self._outputFunctionToCall('Failed to connect to Ubidots.') # Client of class should try again until it becomes availiable.
                 self._connected = False
             return False
 
@@ -36,17 +36,20 @@ class UbiConnection:
             self._connected = False
             return False
 
-    def __init__(self, accountKey):
+    def __init__(self, accountKey, outputFunctionToCall):
         def apiInit():
             #TODO: Add a connection retry if it fails to connect when this object is created.
             self._api = UbiApi.ApiClient(apikey=accountKey)
+
+        self._outputFunctionToCall = outputFunctionToCall
 
         self._ubiAccountKey = accountKey
         self._ubiVariables = []
         self._connected = False
         self._accountConnected = False
-        self.tryAccountConnect(accountKey)
-        print('Connected to Ubidot account: ' + str(self._accountConnected))
+        #self.tryAccountConnect(accountKey)
+
+        #self._outputFunctionToCall('Connected to Ubidot account: ' + str(self._accountConnected))
 
     def getVariableFromServer(self, variableIndex):
         def readVariable(variableList):
@@ -58,7 +61,7 @@ class UbiConnection:
         return self._tryConnect(lambda: readVariable(self._ubiVariables[variableIndex].get_values(1)))
 
     def writeVariableToServer(self, variableIndex, valueToWrite):
-        print('Writing ' + str(valueToWrite) + ' to server.')
+        self._outputFunctionToCall('Writing ' + str(valueToWrite) + ' to server.')
         return self._tryConnect(lambda: self._ubiVariables[variableIndex].save_value({'value': valueToWrite}))
 
 
