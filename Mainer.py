@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from itertools import combinations
 
 __author__ = 'Brendan Gluth'
@@ -27,16 +29,16 @@ def run():
         #outputFunction  # Can be either be "print" or a log function (depends on program arguments)
 
     # Constants
-    const_MotionPin = 7
     const_AccountKey = '678c47d502499af97147fc3b4b76f45375b6e71d'
     const_PedestrianCountKey = '55a6bc6f7625427f55263d11'
     const_ExternalIPKey = '55bc22eb7625426f6b807d41'
+    
+    const_MotionPin = 7
     const_UpdateServerPedestrianInterval = 100
     const_UpdateUbidotsTimeInterval = 120 # not used yet
     const_CountPath = os.path.dirname(__file__) + '/Data/LastCount.txt'
-    const_LogPath = os.path.dirname(__file__) + 'Logs/LastLog.txt'
-
-
+    const_LogPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/LastLog.txt'
+    const_CSVPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/CSVLog.csv'
 
     def wrappedPrint(string):
         print(string)
@@ -46,7 +48,8 @@ def run():
         currentDateTime = datetime.datetime.now()
         logFile = open(const_LogPath, mode='a')
         logFile.write('[' + str(currentDateTime) + '] - ' + string + '\n')
-
+        
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--silent', help='Silent mode', action='store_true')
     args = parser.parse_args()
@@ -82,7 +85,7 @@ def run():
         return State.ubiConnection.writeVariableToServer(State.pedestrianIndex, newCount)
 
     def handleMotionDetected(channel):
-
+        writeToCSV()
         State.unsentDetections += 1
         State.needsSave = True
         outputFunction("Detection # " + str(State.totalDetections + State.unsentDetections))
@@ -113,12 +116,16 @@ def run():
     def writeCountToFile():
         if not State.needsSave:
             return
-        makeDirIfNotExists(os.path.dirname(const_CountPath))
         file = open(const_CountPath, mode='w')
         file.write(str(State.unsentDetections))
         State.needsSave = False
         outputFunction('Saved ' + str(State.unsentDetections) + ' unsent detections to file.')
 
+    def writeToCSV():
+        file = open(const_CSVPath, 'a')
+        file.write(str(str(datetime.datetime.now()) + "\n"))
+        file.close()
+        
     def readCountFromFile():
         if not (os.path.exists(const_CountPath)):
             return 0
@@ -160,7 +167,7 @@ def run():
         State.externalIPIndex = State.ubiConnection.addNewVariable(const_ExternalIPKey)
 
     def programCleanUp():
-        outputFunction('Quiting...')
+        outputFunction('Quitting...')
         GPIO.cleanup()
         if State.unsentDetections > 0:
             writeCountToFile()
@@ -168,6 +175,9 @@ def run():
     # ********** END OF LOCAL FUNCTIONS **********
 
     # Run starts here:
+    makeDirIfNotExists(os.path.dirname(const_CountPath))
+    makeDirIfNotExists(os.path.dirname(const_CSVPath))
+
     # Set up ubidots connection
     State.ubiConnection = UbiConnect.UbiConnection(const_AccountKey, outputFunction)
     tryConnectToAccount()
