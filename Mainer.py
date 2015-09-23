@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-from itertools import combinations
-
 __author__ = 'Brendan Gluth'
 
 import RPi.GPIO as GPIO
 import time
 import os
-import ipgetter
+#import ipgetter
 import datetime
 import argparse
 
@@ -56,7 +54,7 @@ def main():
                 return False
             else:
                 connectUbiVariables()
-            updateExternalIP()
+            #updateExternalIP()
             outputFunction('Connected to account!')
             return True
 
@@ -138,25 +136,25 @@ def main():
             if os.path.exists(const_CountPath):
                 os.remove(const_CountPath)
 
-        def updateExternalIP():
-            #TODO: Deal with read and write to server failing
-            def convertStringIPToInt(stringIP):
-                seperateStrings = stringIP.split('.')
-                seperateInts = map((lambda stringPart: int(stringPart)), seperateStrings)
-                combinedInts = 1
-                for i in range(0, 3):
-                    combinedInts *= (seperateInts[i] + 1)
-                return combinedInts - 1
+        # def updateExternalIP():
+            # #TODO: Deal with read and write to server failing
+            # def convertStringIPToInt(stringIP):
+                # seperateStrings = stringIP.split('.')
+                # seperateInts = map((lambda stringPart: int(stringPart)), seperateStrings)
+                # combinedInts = 1
+                # for i in range(0, 3):
+                    # combinedInts *= (seperateInts[i] + 1)
+                # return combinedInts - 1
 
-            currentIP = ipgetter.myip()
-            lastIP = State.ubiConnection.getVariableFromServer(State.externalIPIndex)
-            if convertStringIPToInt(currentIP) != lastIP:
-                if not State.ubiConnection.writeVariableToServer(State.externalIPIndex, convertStringIPToInt(currentIP)):
-                    outputFunction('Failed to write external IP to Ubidots.')
+            # currentIP = ipgetter.myip()
+            # lastIP = State.ubiConnection.getVariableFromServer(State.externalIPIndex)
+            # if convertStringIPToInt(currentIP) != lastIP:
+                # if not State.ubiConnection.writeVariableToServer(State.externalIPIndex, convertStringIPToInt(currentIP)):
+                    # outputFunction('Failed to write external IP to Ubidots.')
 
         def connectUbiVariables():
             State.pedestrianIndex = State.ubiConnection.addNewVariable(PedestrianCountKey)
-            State.externalIPIndex = State.ubiConnection.addNewVariable(const_ExternalIPKey)
+            #State.externalIPIndex = State.ubiConnection.addNewVariable(const_ExternalIPKey)
 
         def programCleanUp():
             outputFunction('Quitting...')
@@ -173,7 +171,7 @@ def main():
             unsentDetections = 0
             totalDetections = 0 # Total to date (from Ubidots)
             pedestrianIndex = 0
-            externalIPIndex = 0
+            #externalIPIndex = 0
             needsSave = False # Do we have new unsent detections to write to file?
             #outputFunction  # Can be either be "print" or a log function (depends on program arguments)
         
@@ -185,8 +183,6 @@ def main():
         const_LogPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/LastLog.txt'
         const_CSVPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/CSVLog.csv'
         const_UbidotsXMLPath = os.path.dirname(os.path.abspath(__file__)) + '/Data/UbidotsAccountInfo.xml'
-        
-        const_ExternalIPKey = '55bc22eb7625426f6b807d41'
         
         # Program Arguments
         parser = argparse.ArgumentParser()
@@ -202,17 +198,17 @@ def main():
 
         
         try:
+            Utilities.makeDirIfNotExists(os.path.dirname(const_CountPath))
+            Utilities.makeDirIfNotExists(os.path.dirname(const_CSVPath))
+            Utilities.makeDirIfNotExists(os.path.dirname(const_UbidotsXMLPath))
+        
             # Load in Ubidots account info
             tryGenerateUbidotsXMLTemplate()
             values = Utilities.readInXMLValues(const_UbidotsXMLPath)  
             
             AccountKey = tryGetXMLValue(values, 'AccountKey')
             PedestrianCountKey = tryGetXMLValue(values, 'PedestrianCountKey')
-        
-            # Run starts here:
-            Utilities.makeDirIfNotExists(os.path.dirname(const_CountPath))
-            Utilities.makeDirIfNotExists(os.path.dirname(const_CSVPath))
-            Utilities.makeDirIfNotExists(os.path.dirname(const_UbidotsXMLPath))
+            #ExternalIPKey =
             
             # Set up ubidots connection
             State.ubiConnection = UbiConnect.UbiConnection(AccountKey, outputFunction)
