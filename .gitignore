@@ -1,2 +1,11 @@
+#Paths
+Logs/
+Data/
+
+#File Types
 .idea
 *.pyc
+
+*.sln
+*.pyproj
+*.suo
