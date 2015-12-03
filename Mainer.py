@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 
 __author__ = 'Brendan Gluth'
 
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import time
 import os
 #import ipgetter
@@ -10,26 +10,28 @@ import datetime
 import argparse
 
 import Utilities
-import UbiConnect
+from UbiConnect import UbiConnection
+from UbidotsHelper import UbidotsHelper
+import TextOutputer
+
+import OutputUtilities
 
 restart = True # Set to True to start the program once
 stop = False
+
+# Local variables for run
+class State:
+    unsentDetections = 0
+    totalDetections = 0 # Total to date (from Ubidots)
+    pedestrianIndex = 0
+    needsSave = False # Do we have new unsent detections to write to file?
 
 def main():
     
     def run():
         
         # ********** LOCAL FUNCTIONS **********
-        
-        def wrappedPrint(string):
-            print(string)
 
-        def log(string):
-            Utilities.makeDirIfNotExists(os.path.dirname(const_LogPath))
-            currentDateTime = datetime.datetime.now()
-            logFile = open(const_LogPath, mode='a')
-            logFile.write('[' + str(currentDateTime) + '] - ' + string + '\n')
-            
         
         def tryGetXMLValue(dict, key):
             if key not in dict:
@@ -45,45 +47,32 @@ def main():
                 file = open(const_UbidotsXMLPath, 'w')
                 file.write('<data AccountKey="" PedestrianCountKey=""/>')
                 file.close()
-                outputFunction('Generated UbidotsAccountInfo.xml.')
-        
+                TextOutputer.output('Generated UbidotsAccountInfo.xml.')
+
         def tryConnectToAccount():
-            outputFunction('Trying to Connect to Ubidots account now...')
-            if State.ubiConnection.tryAccountConnect(AccountKey) is False:
-                outputFunction('Failed to connect to account.')
-                return False
-            else:
-                connectUbiVariables()
-            #updateExternalIP()
-            outputFunction('Connected to account!')
-            return True
+            return ubiConnectionHelper.tryConnectToAccount()
 
         def tryGetPedestrianCountFromServer():
-            State.totalDetections = State.ubiConnection.getVariableFromServer(State.pedestrianIndex)
-            if State.totalDetections is False:
-                outputFunction('Failed to get pedestrian count from server. Will try again at a later time.')
-                return False
-            return True
+            return ubiConnectionHelper.tryGetVariableFromUbiServer(State.pedestrianCountUbiHandle)
 
-        def tryWritePedestrianCountToServer(newCount):
-            return State.ubiConnection.writeVariableToServer(State.pedestrianIndex, newCount)
+        def tryWritePedestrianCountToServer(newPedestrianCount):
+            return ubiConnectionHelper.trySetVariableValueOnUbiServer(State.pedestrianCountUbiHandle, newPedestrianCount)
 
         def handleMotionDetected(channel):
             try:         
                 writeToCSV()
                 State.unsentDetections += 1
                 State.needsSave = True
-                outputFunction("Detection # " + str(State.totalDetections + State.unsentDetections))
+                TextOutputer.output("Detection # " + str(State.totalDetections + State.unsentDetections))
 
                 if State.unsentDetections % const_UpdateServerPedestrianInterval is 0:
-                    if not State.ubiConnection.accountConnected and tryConnectToAccount() is False:
+                    if not ubiConnectionHelper.accountConnected and tryConnectToAccount() is False:
                         writeCountToFile()
                         return
                     
                     if State.totalDetections is 0 and not tryGetPedestrianCountFromServer(): # Have we recieved data from the server yet?
-                         outputFunction('Failed to read pedestrian detections from Ubidots.')
-                         writeCountToFile()
-                         return # Can't connect
+                            writeCountToFile()
+                            return # Can't connect
 
                     # At this point we have the count from the server
                     newTotalDetections = int(State.totalDetections) + State.unsentDetections
@@ -99,12 +88,12 @@ def main():
                         writeCountToFile()
                         
             except Exception as e:
-                outputFunction('The following exception has occured:\n' + e.message + '\n')
+                TextOutputer.output('The following exception has occured:\n' + e.message + '\n')
                 global restart
                 global stop
                 restart = True
                 stop = True
-                outputFunction('Program will restart in 5 seconds.')
+                TextOutputer.output('Program will restart in 5 seconds.')
                 time.sleep(5)
 
         def writeCountToFile():
@@ -113,7 +102,7 @@ def main():
             file = open(const_CountPath, mode='w')
             file.write(str(State.unsentDetections))
             State.needsSave = False
-            outputFunction('Saved ' + str(State.unsentDetections) + ' unsent detections to file.')
+            TextOutputer.output('Saved ' + str(State.unsentDetections) + ' unsent detections to file.')
 
         def writeToCSV():
             file = open(const_CSVPath, 'a')
@@ -129,36 +118,19 @@ def main():
                 return 0
             storedCount = int(fileContents)
             file.close()
-            outputFunction('Loaded in ' + str(storedCount) + ' previously unsent detections from last run.')
+            TextOutputer.output('Loaded in ' + str(storedCount) + ' previously unsent detections from last run.')
             return storedCount
 
         def deleteStoredCountIfExists():
             if os.path.exists(const_CountPath):
                 os.remove(const_CountPath)
 
-        # def updateExternalIP():
-            # #TODO: Deal with read and write to server failing
-            # def convertStringIPToInt(stringIP):
-                # seperateStrings = stringIP.split('.')
-                # seperateInts = map((lambda stringPart: int(stringPart)), seperateStrings)
-                # combinedInts = 1
-                # for i in range(0, 3):
-                    # combinedInts *= (seperateInts[i] + 1)
-                # return combinedInts - 1
-
-            # currentIP = ipgetter.myip()
-            # lastIP = State.ubiConnection.getVariableFromServer(State.externalIPIndex)
-            # if convertStringIPToInt(currentIP) != lastIP:
-                # if not State.ubiConnection.writeVariableToServer(State.externalIPIndex, convertStringIPToInt(currentIP)):
-                    # outputFunction('Failed to write external IP to Ubidots.')
-
         def connectUbiVariables():
-            State.pedestrianIndex = State.ubiConnection.addNewVariable(PedestrianCountKey)
-            #State.externalIPIndex = State.ubiConnection.addNewVariable(const_ExternalIPKey)
+            pedestrianIndex = ubiConnectionHelper.addNewVariable(PedestrianCountKey)
 
         def programCleanUp():
-            outputFunction('Quitting...')
-            GPIO.cleanup()
+            TextOutputer.output('Quitting...')
+            #GPIO.cleanup()
             if State.unsentDetections > 0:
                 writeCountToFile()
                 
@@ -190,9 +162,7 @@ def main():
         args = parser.parse_args()
 
         if args.silent:
-            outputFunction = log
-        else:
-            outputFunction = wrappedPrint
+            TextOutputer.output = OutputUtilities.createLoggingFunction(const_LogPath, useTimeStamp = True)
 
         # ********** END OF INIT **********
 
@@ -208,16 +178,15 @@ def main():
             
             AccountKey = tryGetXMLValue(values, 'AccountKey')
             PedestrianCountKey = tryGetXMLValue(values, 'PedestrianCountKey')
-            #ExternalIPKey =
             
             # Set up ubidots connection
-            State.ubiConnection = UbiConnect.UbiConnection(AccountKey, outputFunction)
-            tryConnectToAccount()
+            ubiConnectionHelper = UbidotsHelper(UbiConnection(AccountKey));
+            ubiConnectionHelper.tryConnectToAccount()
 
             # Set up pins
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(const_MotionPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-            GPIO.add_event_detect(const_MotionPin, GPIO.RISING, handleMotionDetected)
+            #GPIO.setmode(GPIO.BCM)
+            #GPIO.setup(const_MotionPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            #GPIO.add_event_detect(const_MotionPin, GPIO.RISING, handleMotionDetected)
 
             # Read in any unsent count from a previous run
             State.unsentDetections = readCountFromFile()
@@ -227,18 +196,18 @@ def main():
             
             # Will make into a nicer menu later.
             while not stop:
-                time.sleep(5) # hacky temp fix!
+                #time.sleep(5) # hacky temp fix!
                 
-                # # # For debugging
-                # text = raw_input('Enter any text to quit.\n')
+                 # For debugging
+                text = raw_input('Enter any text to quit.\n')
                 
-                # # Menu currently just used for debug
-                # if text == 'Debug':
-                    # handleMotionDetected(7)
-                # elif text == 'Excep':
-                    # raise Exception
-                # else:
-                    # stop = True
+                 # Menu currently just used for debug
+                if text == 'Debug':
+                    handleMotionDetected(7)
+                elif text == 'Excep':
+                    raise Exception
+                else:
+                    stop = True
 
             programCleanUp()
             
@@ -246,9 +215,8 @@ def main():
             programCleanUp()
         except Utilities.XMLUnexpectedValue as e:
             programCleanUp()
-            outputFunction('The following exception has occured:\n' + e.message + '\n')
-            outputFunction('Make sure ' + const_UbidotsXMLPath + ' exists and is formatted correctly!')
-        
+            TextOutputer.output('The following exception has occured:\n' + e.message + '\n')
+            TextOutputer.output('Make sure ' + const_UbidotsXMLPath + ' exists and is formatted correctly!')
 
     global restart
     

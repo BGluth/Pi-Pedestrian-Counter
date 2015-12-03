@@ -1,4 +1,4 @@
-__author__ = 'Brendan Gluth'
+﻿__author__ = 'Brendan Gluth'
 
 import os
 import xml.etree.ElementTree as ET
@@ -27,3 +27,9 @@ def readInXMLValues(filePath):
         
     # Read in any of data's attributes
     return data.attrib
+
+def openAndAppendToFile(filePath, textToAppend):
+    makeDirIfNotExists(filePath)
+    file = open(filePath, mode='a')
+    file.write(textToAppend)
+    file.close()

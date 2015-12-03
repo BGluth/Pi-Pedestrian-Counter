@@ -1,71 +1,56 @@
-__author__ = 'root'
+﻿__author__ = 'Brendan Gluth'
 
 import ubidots.apiclient as UbiApi
 from requests.exceptions import RequestException
 
 class UbiConnection:
 
-    @property
-    def connected(self):
-        return self._connected
-    @property
-    def accountConnected(self):
-        return self._accountConnected
-
-
-    def _tryConnect(self, function):
-        try:
-            returnedValue = function()
-            self._connected = True
-            return returnedValue
-
-        except (UbiApi.UbidotsError, RequestException):
-            if (not self._connected): # Print message if we just lost connection.
-                self._outputFunctionToCall('Failed to connect to Ubidots.') # Client of class should try again until it becomes availiable.
-                self._connected = False
-            return False
-
-    def tryAccountConnect(self, accountKey):
-        result = self._tryConnect(lambda: UbiApi.ApiClient(apikey=accountKey))
-        if result is not False:
-            self._api = result
-            self._connected = True
-            self._accountConnected = True
-            return True
-        else:
-            self._connected = False
-            return False
-
-    def __init__(self, accountKey, outputFunctionToCall):
-        def apiInit():
-            #TODO: Add a connection retry if it fails to connect when this object is created.
-            self._api = UbiApi.ApiClient(apikey=accountKey)
-
-        self._outputFunctionToCall = outputFunctionToCall
-
+    def __init__(self, accountKey):
         self._ubiAccountKey = accountKey
         self._ubiVariables = []
         self._connected = False
         self._accountConnected = False
-        #self.tryAccountConnect(accountKey)
 
-        #self._outputFunctionToCall('Connected to Ubidot account: ' + str(self._accountConnected))
+    def _tryConnect(self, connectFunction):
+        def connect():
+            connectFunction()
+            self._connected = True
 
-    def getVariableFromServer(self, variableIndex):
-        def readVariable(variableList):
-            if (len(variableList) > 0):
-                return variableList[0]['value'] # Note: Ubidots apparently likes storing numbers as floats...
-            else:
-                return 0 # Might be inappropriate if returning something like a string, but for now we just need a number
+        try:
+            connect()
+            return True
 
-        return self._tryConnect(lambda: readVariable(self._ubiVariables[variableIndex].get_values(1)))
+        except (UbiApi.UbidotsError, RequestException):
+            self.connected = False;
+            return False
 
-    def writeVariableToServer(self, variableIndex, valueToWrite):
-        self._outputFunctionToCall('Writing ' + str(valueToWrite) + ' to server.')
-        return self._tryConnect(lambda: self._ubiVariables[variableIndex].save_value({'value': valueToWrite}))
+    def tryAccountConnect(self):
+        def connectAccountThroughAPIInit():
+            self._api = UbiApi.ApiClient(apikey = self._ubiAccountKey)
 
+        return self._tryConnect(connectAccountThroughAPIInit) 
+
+    def tryGetVariableFromServer(self, variableIndex):
+        def readVariable(ReturnedUbidotsVariableData):
+            return ReturnedUbidotsVariableData[0]['value'] # Note: Ubidots apparently likes storing numbers as floats...
+
+        ubiVariable = _getUbiVariableByIndex(variableIndex);
+        return self._tryConnect(lambda: readVariable(ubiVariable.get_values(1)))
+
+    def tryWriteVariableToServer(self, variableIndex, valueToWrite):
+        ubiVariable = _getUbiVariableByIndex(variableIndex);
+        return self._tryConnect(lambda: ubiVariable.save_value({'value': valueToWrite}))
 
     def addNewVariable(self, variableKey):
-        index = len(self._ubiVariables)
+        indexOfNewVariable = len(self._ubiVariables)
         self._ubiVariables.append(self._api.get_variable(variableKey))
-        return index
+        return indexOfNewVariable
+
+    def isConnected(self):
+        return self.connected
+
+    def isConnectedToAccount(self):
+        return self.accountConnected
+
+    def _getUbiVariableByIndex(self, variableIndex):
+        return self._ubiVariables[variableIndex]
