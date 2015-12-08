@@ -7,7 +7,7 @@ class UbiConnection:
 
     def __init__(self, accountKey):
         self._ubiAccountKey = accountKey
-        self._ubiVariables = []
+        self._ubiVariableConnections = []
         self._connected = False
         self._accountConnected = False
 
@@ -30,20 +30,20 @@ class UbiConnection:
 
         return self._tryConnect(connectAccountThroughAPIInit) 
 
-    def tryGetVariableFromServer(self, variableIndex):
+    def tryGetVariableFromServer(self, variableHandle):
         def readVariable(ReturnedUbidotsVariableData):
             return ReturnedUbidotsVariableData[0]['value'] # Note: Ubidots apparently likes storing numbers as floats...
 
-        ubiVariable = _getUbiVariableByIndex(variableIndex);
-        return self._tryConnect(lambda: readVariable(ubiVariable.get_values(1)))
+        ubiVariableConnection = _getUbiVariableConnectionByIndex(variableHandle);
+        return self._tryConnect(lambda: readVariable(ubiVariableConnection.get_values(1)))
 
-    def tryWriteVariableToServer(self, variableIndex, valueToWrite):
-        ubiVariable = _getUbiVariableByIndex(variableIndex);
-        return self._tryConnect(lambda: ubiVariable.save_value({'value': valueToWrite}))
+    def tryWriteVariableToServer(self, variableHandle, valueToWrite):
+        ubiVariableConnection = _getUbiVariableConnectionByIndex(variableHandle);
+        return self._tryConnect(lambda: ubiVariableConnection.save_value({'value': valueToWrite}))
 
-    def addNewVariable(self, variableKey):
-        indexOfNewVariable = len(self._ubiVariables)
-        self._ubiVariables.append(self._api.get_variable(variableKey))
+    def addNewVariableAndReturnHandle(self, variableKey):
+        indexOfNewVariable = len(self._ubiVariableConnections)
+        self._ubiVariableConnections.append(self._api.get_variable(variableKey))
         return indexOfNewVariable
 
     def isConnected(self):
@@ -52,5 +52,5 @@ class UbiConnection:
     def isConnectedToAccount(self):
         return self.accountConnected
 
-    def _getUbiVariableByIndex(self, variableIndex):
-        return self._ubiVariables[variableIndex]
+    def _getUbiVariableConnectionByIndex(self, variableIndex):
+        return self._ubiVariableConnections[variableIndex]

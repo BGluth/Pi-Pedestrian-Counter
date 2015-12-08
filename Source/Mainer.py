@@ -151,10 +151,10 @@ def main():
         const_MotionPin = 7
         const_UpdateServerPedestrianInterval = 100
         const_UpdateUbidotsTimeInterval = 120 # not used yet
-        const_CountPath = os.path.dirname(__file__) + '/Data/LastCount.txt'
-        const_LogPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/LastLog.txt'
-        const_CSVPath = os.path.dirname(os.path.abspath(__file__)) + '/Logs/CSVLog.csv'
-        const_UbidotsXMLPath = os.path.dirname(os.path.abspath(__file__)) + '/Data/UbidotsAccountInfo.xml'
+        const_CountPath = os.path.dirname(__file__) + '/../Data/LastCount.txt'
+        const_LogPath = os.path.dirname(os.path.abspath(__file__)) + '/../Logs/LastLog.txt'
+        const_CSVPath = os.path.dirname(os.path.abspath(__file__)) + '/../Logs/CSVLog.csv'
+        const_UbidotsXMLPath = os.path.dirname(os.path.abspath(__file__)) + '/../Data/UbidotsAccountInfo.xml'
         
         # Program Arguments
         parser = argparse.ArgumentParser()
