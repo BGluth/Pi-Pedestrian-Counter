@@ -1,11 +1,16 @@
-#Paths
+# Paths
 Logs/
 Data/
+TestResults/
 
 #File Types
 .idea
 *.pyc
 
+# VS
 *.sln
 *.pyproj
 *.suo
+*.user
+*.psess
+*.playlist
