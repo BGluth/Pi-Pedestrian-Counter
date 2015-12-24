@@ -13,32 +13,37 @@ class UbiConnection:
 
     def _tryConnect(self, connectFunction):
         def connect():
-            connectFunction()
+            functionResults = connectFunction()
+            if functionResults is None:
+                functionResults = True
             self._connected = True
+            return functionResults
 
         try:
-            connect()
-            return True
+            return connect()
 
         except (UbiApi.UbidotsError, RequestException):
-            self.connected = False;
+            self._connected = False;
             return False
 
     def tryAccountConnect(self):
         def connectAccountThroughAPIInit():
             self._api = UbiApi.ApiClient(apikey = self._ubiAccountKey)
 
-        return self._tryConnect(connectAccountThroughAPIInit) 
+        success = self._tryConnect(connectAccountThroughAPIInit)
+        self._accountConnected = success
+        return success
 
-    def tryGetVariableFromServer(self, variableHandle):
-        def readVariable(ReturnedUbidotsVariableData):
-            return ReturnedUbidotsVariableData[0]['value'] # Note: Ubidots apparently likes storing numbers as floats...
+    def tryReadVariableFromServer(self, variableHandle):
+        def readVariable(ubidotsVariableConnection):
+            lastSetVariableValue = ubidotsVariableConnection.get_values(1)
+            return lastSetVariableValue[0]['value'] # Note: Ubidots apparently likes storing numbers as floats...
 
-        ubiVariableConnection = _getUbiVariableConnectionByIndex(variableHandle);
-        return self._tryConnect(lambda: readVariable(ubiVariableConnection.get_values(1)))
+        ubiVariableConnection = self._getUbiVariableConnectionByIndex(variableHandle);
+        return self._tryConnect(lambda: readVariable(ubiVariableConnection))
 
     def tryWriteVariableToServer(self, variableHandle, valueToWrite):
-        ubiVariableConnection = _getUbiVariableConnectionByIndex(variableHandle);
+        ubiVariableConnection = self._getUbiVariableConnectionByIndex(variableHandle);
         return self._tryConnect(lambda: ubiVariableConnection.save_value({'value': valueToWrite}))
 
     def addNewVariableAndReturnHandle(self, variableKey):
@@ -47,10 +52,10 @@ class UbiConnection:
         return indexOfNewVariable
 
     def isConnected(self):
-        return self.connected
+        return self._connected
 
     def isConnectedToAccount(self):
-        return self.accountConnected
+        return self._accountConnected
 
     def _getUbiVariableConnectionByIndex(self, variableIndex):
         return self._ubiVariableConnections[variableIndex]
