@@ -180,8 +180,8 @@ def main():
             PedestrianCountKey = tryGetXMLValue(values, 'PedestrianCountKey')
             
             # Set up ubidots connection
-            ubiConnectionHelper = UbidotsHelper(UbiConnection(AccountKey));
-            ubiConnectionHelper.tryConnectToAccount()
+            ubiConnectionHelper = UbidotsHelper();
+            ubiConnectionHelper.tryConnectToAccount(AccountKey)
 
             # Set up pins
             #GPIO.setmode(GPIO.BCM)
