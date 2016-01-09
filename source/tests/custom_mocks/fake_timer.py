@@ -25,5 +25,5 @@ def callFunctionCallbacks(callbackName):
     for callbackFunction in callbacksToCall[:numCallbacks]:
         callbackFunction()
     # Once a callback is called the callback should be removed from the list, as how a timer would expire after it is used.
-    FakeTimerRemote.registeredCallbacks = callbacksToCall[numCallbacks:]
+    callbacksToCall = callbacksToCall[numCallbacks:]
         

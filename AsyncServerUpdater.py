@@ -1,35 +1,7 @@
 import Queue
 import threading
 
-_INCREMENT = 0
-_SET = 1
-
-def updateType_Increment(variableName):
-    return [SET, variableName]
-
-def updateType_Set(variableName, newValue):
-    return [INCREMENT, variableName, newValue]
-
-def _setVariableValue(variable, newValue):
-    variable[const_variable_currentValueIndex] = newValue
-
-def _incrementVariableValue(variable):
-    variable[const_variable_currentValueIndex] += 1
-
 class AsyncTimedServerVariableUpdater():
-
-    const_variable_currentValueIndex = 0
-    const_variable_updateFunctionIndex = 1
-    const_variable_needsServerUpdateIndex = 2
-
-    const_queuedVariableUpdate_functionKeyIndex = 0
-    const_queuedVariableUpdate_variableNameIndex = 1
-
-
-    updateVariableValueFunctionsDict = {
-        _SET: _setVariableValue,
-        _INCREMENT: _incrementVariableValue
-        }
 
     def __init__(self, updateFrequency):
         self.queuedVariableUpdates = Queue.Queue()
@@ -38,11 +10,11 @@ class AsyncTimedServerVariableUpdater():
 
         self._callUpdateMethodAfterTime()
 
-    def addVariable(self, variableName, updateFunction, initialValue = 0):
-        self.variables[variableName] = (initialValue, updateFunction, True)
+    def addVariable(self, variableName, sendUpdatedVariableToServerFunction, initialValue = 0):
+        self.variables[variableName] = [initialValue, sendUpdatedVariableToServerFunction, True]
 
     def queueVariableUpdate(self, variableName, variableUpdateFunction):
-        self._addToUpdateQueue(variableName, variableUpdateFunction)
+        self.queuedVariableUpdates.put([variableName, variableUpdateFunction])        
 
     def stop(self):
         self.updateTimer.cancel()
@@ -55,30 +27,36 @@ class AsyncTimedServerVariableUpdater():
         self._callUpdateMethodAfterTime()
 
     def _applyQueuedVariableUpdates(self):
-        while self.queuedVariableUpdates.not_empty is True:
+        while self._variableUpdatesExist():
             queuedVariableUpdate = self.queuedVariableUpdates.get()
             self._applyUpdateToVariable(queuedVariableUpdate)
+            self.queuedVariableUpdates.task_done()
+
+    def _variableUpdatesExist(self):
+        return self.queuedVariableUpdates.unfinished_tasks != 0
 
     def _applyUpdateToVariable(self, queuedVariableUpdate):
-        #functionKey = queuedVariableUpdate[0]
-        #variableName = queuedVariableUpdate[1]
-        updateVariableValueFunction = self.updateVariableValueFunctionsDict[functionKey]
+        variableName, updateAndReturnVariableValueFunction = queuedVariableUpdate
         variable = self.variables[variableName]
-        updateVariableValueFunction(variable, queuedVariableUpdate[2:]) # Any parameters after the second element are extra parameters that the update function needs.
-        variable[const_variable_needsServerUpdateIndex] = True
+        currentValue, _, _ = variable
+        updatedValue = updateAndReturnVariableValueFunction(currentValue)
+        _setVariableCurrentValue(variable, updatedValue)
+        _setVariableNeedsUpdate(variable, True)
 
     def _applyVariableUpdatesToServer(self):
         for variableNameKey in self.variables:
-            currentValue, updateFunction, needsUpdate = self.variables[variableNameKey]
+            variable = self.variables[variableNameKey]
+            currentValue, updateServerVariableFunction, needsUpdate = variable
             if needsUpdate is True:
-                updateFunction(variableNameKey, currentValue)
-                needsUpdate = False
+                updateServerVariableFunction(variableNameKey, currentValue)
+                _setVariableNeedsUpdate(variable, False)
 
     def _callUpdateMethodAfterTime(self):
         self.updateTimer = threading.Timer(self.updateFrequency, self._updateVariableValues)
         self.updateTimer.start()
 
-    def _addToUpdateQueue(self, variableName, updateFunction):
-        self.queuedVariableUpdates.put([variableName, updateFunction])
+def _setVariableNeedsUpdate(variable, needsUpdate):
+    variable[2] = needsUpdate
 
-                       
+def _setVariableCurrentValue(variable, newValue):
+    variable[0] = newValue
