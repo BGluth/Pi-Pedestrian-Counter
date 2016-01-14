@@ -1,19 +1,34 @@
 ﻿import mock
 
-def setUpFakeInstanceOfObject(testObject, name, mockPath, fakeObjectToUse):
+class MockManager:
 
-    patcher = None
-    patcherVariableName = _createPatcherName(name)
+    def __init__(self):
+        self._activeMocks = {}
 
-    patcher = mock.patch(mockPath, fakeObjectToUse)
+    def addFake(self, keyToUse, mockPath, fakeObjectToUse):
+        patcher = mock.patch(mockPath, fakeObjectToUse)
+        self._createMockAndAddToDict(patcher, keyToUse)
 
-    setattr(testObject, patcherVariableName, patcher)
-    patcher.start()
+    def addMock(self, keyToUse, mockPath):
+        patcher = mock.patch(mockPath, autospec = True)
+        self._createMockAndAddToDict(patcher, keyToUse)
 
-    patcher.return_value = fakeObjectToUse
+    def _createMockAndAddToDict(self, patcher, keyToUse):
+        mockedObject = patcher.start()
+        self._activeMocks[keyToUse] = (mockedObject, patcher)
 
-def _createPatcherName(name):
-    return 'fake' + name + 'Patcher'
+    def getMock(self, key):
+        return self._activeMocks[key][0]
+
+    def getPatcher(self, key):
+        return self._activeMocks[key][1]
+
+    def cleanUp(self):
+        for key in self._activeMocks:
+            patcher = self.getPatcher(key)
+            patcher.stop()
+        self._activeMocks.clear()
+
 
 
 

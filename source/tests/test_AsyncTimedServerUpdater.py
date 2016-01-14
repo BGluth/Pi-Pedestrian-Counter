@@ -31,6 +31,9 @@ class WhenAddingFiveVariables(unittest.TestCase):
         self.given_a_async_updater()
         self.after_adding_five_variables_and_queueing_updates()
 
+    def cleanUp():
+        TestingUtilities.mockManager.cleanUp()
+
 
 class WhenTryingToUpdateWhenNoVariableNeedUpdates(unittest.TestCase):
     
@@ -50,6 +53,9 @@ class WhenTryingToUpdateWhenNoVariableNeedUpdates(unittest.TestCase):
     def setUp(self):
         self.given_a_async_updater()
         self.after_adding_variables_and_forcing_update_twice()
+
+    def cleanUp():
+        TestingUtilities.mockManager.cleanUp()
 
 class WhenEnqueueingManyUpdates(unittest.TestCase):
 
@@ -81,7 +87,8 @@ def _createMockServerVariableUpdateFunction(testObject):
     testObject.mockServerUpdateFunction = mock.MagicMock()
 
 def _setUpTimerFake(testObject):
-    TestingUtilities.setUpFakeInstanceOfObject(testObject, 'Timer', 'threading.Timer', fake_timer.FakeTimerRemote)
+    TestingUtilities.mockManager = TestingUtilities.MockManager()
+    TestingUtilities.mockManager.addFake('Timer', 'threading.Timer', fake_timer.FakeTimerRemote)
 
 def _executeTimedUpdatedUpdateMethod():
     # Not great, but...
