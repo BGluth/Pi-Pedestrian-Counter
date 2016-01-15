@@ -29,7 +29,8 @@ class MockManager:
             patcher.stop()
         self._activeMocks.clear()
 
-
+def extractArgumentValueFromMockCallArgs(mockCallArgs, argumentIndex):
+    return mockCallArgs[0][argumentIndex]
 
 
 

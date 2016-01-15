@@ -1,39 +1,43 @@
 ﻿import TextOutputer
 import UbiConnect
 
+
+def tryConnectToAccount(ubiAccountKey):
+    TextOutputer.output('Trying to Connect to Ubidots account now...')
+    ubiConnectionAttempt = UbiConnect.tryConnectToUbidotsAccount(ubiAccountKey)
+    return _intrepretOutputForConnectionAttemptResults(ubiConnectionAttempt)
+
+def _intrepretOutputForConnectionAttemptResults(ubiConnectionAttempt):
+    if ubiConnectionAttempt is not False:
+        TextOutputer.output('Connected to Ubidots account!')
+        return UbidotsHelper(ubiConnectionAttempt)
+
+    TextOutputer.output('Failed to connect to Ubidots account.')
+    return False
+
 class UbidotsHelper:
-    def __init__(self):
+    def __init__(self, ubiConnection):
         self._ubiHandleToVariableNameDict = {}
+        self._ubiConnection = ubiConnection
+ 
+    def tryGetHandleToUbiServerVariable(self, serverVariableKey, localVariableName):
+        ubiVariableHandle = self._ubiConnection.tryAddNewVariableAndReturnHandle(serverVariableKey)
 
-    def tryConnectToAccount(self, ubiAccountKey):
-
-        TextOutputer.output('Trying to Connect to Ubidots account now...')
-        ubiConnectionAttempt = UbiConnect.tryConnectToUbidotsAccount(ubiAccountKey)
-        success = self._intrepretConnectionAttemptResults(ubiConnectionAttempt)
-        return success
-
-    def _intrepretConnectionAttemptResults(self, ubiConnectionAttempt):
-        if ubiConnectionAttempt is not False:
-            TextOutputer.output('Connected to Ubidots account!')
-            self._ubiConnection = ubiConnectionAttempt
-            return True
+        if ubiVariableHandle is not False:
+            self._ubiHandleToVariableNameDict[ubiVariableHandle] = localVariableName
         else:
-            TextOutputer.output('Failed to connect to Ubidots account.')
-            return False  
-
-    def getHandleToUbiVariable(self, variableKey, variableName):
-        ubiVariableHandle = self._ubiConnection.addNewVariable(variableKey)
-        self._ubiHandleToVariableNameDict[ubiVariableHandle] = variableName
+            TextOutputer.output('Failed to get handle to server variable \'' + localVariableName
+                                + '\' with server variable key of: \'' + serverVariableKey + '\'.')
         return ubiVariableHandle
 
-    def tryGetVariableFromUbiServer(self, ubiVariableHandle):
-        returnedServerValue = self._ubiConnection.tryGetVariableFromServer(ubiVariableHandle)
-        if totalDetections is False:
-            TextOutputer.output('Failed to get ' + self.ubiVariableNames[ubiVariableHandle] + ' from server.')
+    def tryReadVariableFromUbiServer(self, ubiVariableHandle):
+        returnedServerValue = self._ubiConnection.tryReadVariableFromServer(ubiVariableHandle)
+        if returnedServerValue is False:
+            TextOutputer.output('Failed to read from \'' + self._ubiHandleToVariableNameDict[ubiVariableHandle] + '\' on server.')
         return returnedServerValue
 
-    def trySetVariableValueOnUbiServer(self, ubiVariableHandle, newValue):
-        success = self._ubiConnection.writeVariableToServer(ubiVariableHandle, newValue)
+    def tryWriteVariableValueOnUbiServer(self, ubiVariableHandle, newValue):
+        success = self._ubiConnection.tryWriteVariableToServer(ubiVariableHandle, newValue)
         if not success:
-            TextOutputer.output('Failed to set ' + self.ubiVariableNames[ubiVariableHandle] + ' on server.')
+            TextOutputer.output('Failed to write to \'' + self._ubiHandleToVariableNameDict[ubiVariableHandle] + '\' on server.')
         return success

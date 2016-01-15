@@ -59,10 +59,14 @@ class UbiConnection:
         ubiVariableConnection = self._getUbiVariableConnectionByIndex(variableHandle);
         return self._tryConnectWithStatusStateUpdate(lambda: ubiVariableConnection.save_value({'value': valueToWrite}))
 
-    def addNewVariableAndReturnHandle(self, variableKey):
+    def tryAddNewVariableAndReturnHandle(self, variableKey):
         indexOfNewVariable = len(self._ubiVariableConnections)
-        self._ubiVariableConnections.append(self._apiClient.get_variable(variableKey))
-        return indexOfNewVariable
+        serverVariableHandle = self._tryConnectWithStatusStateUpdate(lambda: self._apiClient.get_variable(variableKey))
+
+        if serverVariableHandle is not False:
+            self._ubiVariableConnections.append(serverVariableHandle)
+            return indexOfNewVariable
+        return False
 
     def isConnected(self):
         return self._connected
