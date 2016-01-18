@@ -1,3 +1,5 @@
+(18/01/2016) NOTE: I am currently in the middle of a serious refactor of the project in order to clean up and to later be able to easily add support for backends other than Ubidots.
+
 Raspberry Pi 2 Pedestrian Counter
 =================================
 
