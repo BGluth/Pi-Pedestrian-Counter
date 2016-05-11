@@ -1,4 +1,4 @@
-(18/01/2016) NOTE: I am currently in the middle of a serious refactor of the project in order to clean up and to later be able to easily add support for backends other than Ubidots.
+(11/05/2016) NOTE: Development halted while I am rewriting the counter project to run on a low power (using ![Particle Photon](https://docs.particle.io/datasheets/photon-datasheet/), when hibernating) embedded device that can be very easily sustained by a small solar panel or run off of a battery for a decent amount of time. Will upload project to Github when in a usable state.
 
 Raspberry Pi 2 Pedestrian Counter
 =================================
